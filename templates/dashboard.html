@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameRecommender - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px 50px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid #00ccff;
+            box-shadow: 0 0 20px rgba(0, 204, 255, 0.5);
+        }
+
+        .user-details h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            background: linear-gradient(45deg, #00ccff, #00ffaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 10px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            text-align: center;
+            background: linear-gradient(45deg, #00ccff, #00ffaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+
+        .game-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-card.active {
+            border-color: #00ffaa;
+            box-shadow: 0 0 30px rgba(0, 255, 170, 0.3);
+        }
+
+        .game-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ccff;
+        }
+
+        .game-playtime {
+            color: #00ffaa;
+            font-size: 0.9rem;
+        }
+
+        .recommendations-section {
+            margin-top: 50px;
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .recommendation-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .recommendation-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .rec-poster {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .rec-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ccff;
+        }
+
+        .rec-genre {
+            color: #cccccc;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .rec-similarity {
+            color: #00ffaa;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #00ccff;
+        }
+
+        .no-selection {
+            text-align: center;
+            padding: 60px;
+            color: #cccccc;
+            font-size: 1.2rem;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 30px;
+            right: 50px;
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff4444;
+            border: 1px solid #ff4444;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="user-info">
+            {% if avatar %}
+            <img src="{{ avatar }}" alt="Avatar" class="avatar">
+            {% endif %}
+            <div class="user-details">
+                <h1>Welcome, {{ username }}! 🎮</h1>
+                <p>Steam ID: {{ steam_id }}</p>
+            </div>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <strong>{{ games_count }}</strong> Games in Library
+            </div>
+            <div class="stat">
+                <strong>{{ user_games|length }}</strong> Games Loaded
+            </div>
+        </div>
+        <a href="/" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="container">
+        <h2 class="section-title">🎯 Your Game Library</h2>
+        <p style="text-align: center; margin-bottom: 30px; color: #cccccc;">
+            Click on any game to get personalized recommendations
+        </p>
+
+        <div class="games-grid" id="gamesGrid">
+            {% for game in user_games %}
+            <div class="game-card" onclick="getRecommendations({{ game.appid }}, this)">
+                <div class="game-name">{{ game.name }}</div>
+                <div class="game-playtime">
+                    ⏱️ {{ game.playtime_hours }} hours ({{ game.playtime_minutes|int }} minutes)
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="recommendations-section">
+            <h2 class="section-title">🚀 Recommendations</h2>
+            <div id="recommendationsContainer">
+                <div class="no-selection">
+                    👆 Select a game from your library to see recommendations
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentActiveCard = null;
+
+        function getRecommendations(appid, element) {
+            // Update active state
+            if (currentActiveCard) {
+                currentActiveCard.classList.remove('active');
+            }
+            element.classList.add('active');
+            currentActiveCard = element;
+
+            // Show loading
+            document.getElementById('recommendationsContainer').innerHTML = `
+                <div class="loading">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                    <div>Finding similar games...</div>
+                </div>
+            `;
+
+            // Fetch recommendations
+            fetch(`/get_recommendations/${appid}`)
+                .then(response => response.json())
+                .then(recommendations => {
+                    displayRecommendations(recommendations);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('recommendationsContainer').innerHTML = `
+                        <div class="loading">
+                            <div style="color: #ff4444;">Error loading recommendations</div>
+                        </div>
+                    `;
+                });
+        }
+
+        function displayRecommendations(recommendations) {
+            const container = document.getElementById('recommendationsContainer');
+            
+            if (!recommendations || recommendations.length === 0) {
+                container.innerHTML = `
+                    <div class="no-selection">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">😔</div>
+                        <div>No recommendations found for this game.</div>
+                        <div style="margin-top: 10px; font-size: 0.9rem;">Try selecting another game from your library.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="recommendations-grid">';
+            
+            recommendations.forEach(rec => {
+                html += `
+                    <div class="recommendation-card">
+                        ${rec.poster ? `<img src="${rec.poster}" alt="${rec.name}" class="rec-poster" onerror="this.style.display='none'">` : ''}
+                        <div class="rec-name">${rec.name}</div>
+                        <div class="rec-genre">${rec.genre || 'Genre not available'}</div>
+                        <div class="rec-similarity">Similarity: ${rec.similarity}</div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Select first game by default
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstGameCard = document.querySelector('.game-card');
+            if (firstGameCard) {
+                setTimeout(() => {
+                    firstGameCard.click();
+                }, 1000);
+            }
+        });
+    </script>
+</body>
+</html>
