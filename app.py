@@ -33,30 +33,41 @@ def login():
 # ----------------- Steam Authorization -----------------
 @app.route("/authorize")
 def authorize():
-    claimed_id = request.args.get("openid.claimed_id")
-    steam_id = claimed_id.split("/")[-1]
-    session["steam_id"] = steam_id
-    
-    # Get Steam username and avatar
-    user_profile = get_steam_user_profile(steam_id)
-    session["username"] = user_profile.get("personaname", "Steam User")
-    session["avatar"] = user_profile.get("avatarfull", "")
-    
-    games_count = fetch_user_library(steam_id)
-    user_games = get_user_games_from_db(steam_id)
+    try:
+        claimed_id = request.args.get("openid.claimed_id")
+        if not claimed_id:
+            return "Authentication failed: No claimed ID", 400
+            
+        steam_id = claimed_id.split("/")[-1]
+        if not steam_id.isdigit():
+            return "Invalid Steam ID", 400
+            
+        session["steam_id"] = steam_id
+        
+        # Get Steam username and avatar
+        user_profile = get_steam_user_profile(steam_id)
+        session["username"] = user_profile.get("personaname", "Steam User")
+        session["avatar"] = user_profile.get("avatarfull", "")
+        
+        games_count = fetch_user_library(steam_id)
+        user_games = get_user_games_from_db(steam_id)
 
-    return render_template("dashboard.html", 
-                         username=session["username"],
-                         avatar=session["avatar"],
-                         steam_id=steam_id, 
-                         user_games=user_games,
-                         games_count=games_count)
+        return render_template("dashboard.html", 
+                             username=session["username"],
+                             avatar=session["avatar"],
+                             steam_id=steam_id, 
+                             user_games=user_games,
+                             games_count=games_count)
+    except Exception as e:
+        print(f"Authorization error: {e}")
+        return f"Authentication error: {str(e)}", 500
 
 # ----------------- Get Steam User Profile -----------------
 def get_steam_user_profile(steam_id):
     try:
         url = f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={STEAM_API_KEY}&steamids={steam_id}"
         response = requests.get(url, timeout=10)
+        response.raise_for_status()
         data = response.json()
         
         players = data.get("response", {}).get("players", [])
@@ -87,10 +98,13 @@ def fetch_user_library(steam_id):
 
         games_inserted = 0
         for game in owned_games:
-            appid = game["appid"]
+            appid = game.get("appid")
             name = game.get("name", f"AppID {appid}")
-            playtime_hours = game.get("playtime_forever", 0) / 60
-            user_id = int(steam_id[:16])
+            playtime_forever = game.get("playtime_forever", 0)
+            playtime_hours = playtime_forever / 60.0
+            
+            # Create a stable user_id from steam_id
+            user_id = int(steam_id) % 100000000
             
             cursor.execute(
                 """
@@ -120,8 +134,12 @@ def fetch_user_library(steam_id):
 def get_user_games_from_db(steam_id):
     try:
         connection = mysql.connector.connect(**DB_CONFIG)
+        
+        # Create stable user_id same as in fetch_user_library
+        user_id = int(steam_id) % 100000000
+            
         user_library = pd.read_sql(
-            f"SELECT * FROM user_library WHERE user_id = {int(steam_id[:16])} ORDER BY playtime_hours DESC", 
+            f"SELECT * FROM user_library WHERE user_id = {user_id} ORDER BY playtime_hours DESC", 
             connection
         )
         connection.close()
@@ -130,28 +148,35 @@ def get_user_games_from_db(steam_id):
         games_list = []
         for _, game in user_library.iterrows():
             games_list.append({
-                "appid": int(game["appid"]),  # Convert to native int
-                "name": str(game["name"]),    # Convert to native str
-                "playtime_hours": float(game["playtime_hours"]),  # Convert to native float
+                "appid": int(game["appid"]),
+                "name": str(game["name"]),
+                "playtime_hours": float(game["playtime_hours"]),
                 "playtime_minutes": float(game["playtime_hours"] * 60)
             })
         
+        print(f"Retrieved {len(games_list)} games from database for user {user_id}")
         return games_list
     except Exception as e:
         print(f"Error getting user games from DB: {e}")
         return []
 
-# ----------------- FIXED: Get Recommendations for Specific Game -----------------
+# ----------------- FIXED: Get Recommendations -----------------
 @app.route("/get_recommendations/<int:appid>")
 def get_recommendations(appid):
-    steam_id = session.get("steam_id")
-    if not steam_id:
-        return jsonify({"error": "Not authenticated"}), 401
-    
-    print(f"Getting recommendations for appid: {appid}, user: {steam_id}")
-    recommendations = generate_recommendations_for_game(steam_id, appid)
-    print(f"Generated {len(recommendations)} recommendations")
-    return jsonify(recommendations)
+    try:
+        steam_id = session.get("steam_id")
+        if not steam_id:
+            return jsonify({"error": "Not authenticated"}), 401
+        
+        print(f"Getting recommendations for appid: {appid}, user: {steam_id}")
+        recommendations = generate_recommendations_for_game(steam_id, appid)
+        print(f"Generated {len(recommendations)} recommendations")
+        return jsonify(recommendations)
+    except Exception as e:
+        print(f"Error in get_recommendations route: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error"}), 500
 
 def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
     try:
@@ -159,164 +184,176 @@ def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
         
         connection = mysql.connector.connect(**DB_CONFIG)
         
-        # Get the specific game details from user library
-        game_query = f"SELECT * FROM user_library WHERE user_id = {int(steam_id[:16])} AND appid = {appid}"
-        user_game = pd.read_sql(game_query, connection)
+        # Create user_id
+        user_id = int(steam_id) % 100000000
         
-        if user_game.empty:
-            print(f"Game {appid} not found in user library")
-            return []
-        
-        game_name = str(user_game.iloc[0]["name"])  # Convert to native string
-        print(f"Found game in user library: {game_name} (AppID: {appid})")
-        
+        # Get user's owned games to exclude them
+        user_library = pd.read_sql(
+            f"SELECT appid FROM user_library WHERE user_id = {user_id}", 
+            connection
+        )
+        owned_appids = [int(x) for x in user_library["appid"].tolist()]
+        print(f"User owns {len(owned_appids)} games, excluding from recommendations")
+
         # Get popular games
         popular_games = pd.read_sql("SELECT * FROM popular_games", connection)
         print(f"Loaded {len(popular_games)} games from popular_games")
         
         if popular_games.empty:
             print("Popular games table is empty")
+            connection.close()
             return []
+
+        # Get the specific game name from user library
+        game_query = f"SELECT name FROM user_library WHERE user_id = {user_id} AND appid = {appid}"
+        user_game = pd.read_sql(game_query, connection)
+        
+        if user_game.empty:
+            print(f"Game {appid} not found in user library")
+            connection.close()
+            return []
+        
+        game_name = str(user_game.iloc[0]["name"])
+        print(f"Finding games similar to: {game_name}")
 
         # Check if the game exists in popular_games
         game_in_popular = popular_games[popular_games["appid"] == appid]
+        
         if game_in_popular.empty:
-            print(f"Game {game_name} (AppID: {appid}) not found in popular_games")
-            # Try to find similar games anyway using the game name
-            return get_fallback_recommendations(game_name, popular_games, steam_id, recommendations_count)
-        
-        print(f"Game found in popular_games: {game_in_popular.iloc[0]['name']}")
-        
+            print(f"Game {game_name} not found in popular_games, using fallback")
+            connection.close()
+            return get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count)
+
         # --- Feature Engineering ---
         def combine_features(row):
-            genre = str(row["genre"] or "") + " "
-            categories = str(row["categories"] or "") + " "
-            description = str(row["short_des"] or "")
-            return (genre * 3) + (categories * 2) + description
+            try:
+                genre = str(row.get("genre", "") or "") + " "
+                categories = str(row.get("categories", "") or "") + " "
+                description = str(row.get("short_des", "") or "")
+                tags = str(row.get("tags", "") or "")
+                return (genre * 3) + (categories * 2) + description + " " + tags
+            except:
+                return ""
+
+        # Handle missing columns gracefully
+        required_columns = ["genre", "categories", "short_des", "tags"]
+        for col in required_columns:
+            if col not in popular_games.columns:
+                popular_games[col] = ""
 
         popular_games["combined_features"] = popular_games.apply(combine_features, axis=1)
 
         # --- TF-IDF Vectorization ---
-        vectorizer = TfidfVectorizer(stop_words="english", max_features=5000, min_df=1)
-        tfidf_matrix = vectorizer.fit_transform(popular_games["combined_features"])
-        
+        try:
+            vectorizer = TfidfVectorizer(stop_words="english", max_features=5000, min_df=1)
+            tfidf_matrix = vectorizer.fit_transform(popular_games["combined_features"])
+        except Exception as e:
+            print(f"TF-IDF error: {e}, using fallback")
+            connection.close()
+            return get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count)
+
         # Create appid to index mapping
-        appid_to_index = {int(appid): idx for idx, appid in enumerate(popular_games["appid"])}  # Convert to int
+        appid_to_index = {int(appid): idx for idx, appid in enumerate(popular_games["appid"])}
         
-        idx = appid_to_index.get(int(appid))  # Ensure appid is int
+        idx = appid_to_index.get(int(appid))
         if idx is None:
             print(f"Game index not found for appid: {appid}")
-            return []
+            connection.close()
+            return get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count)
 
         # Calculate similarities
         sim_scores = cosine_similarity(tfidf_matrix[idx], tfidf_matrix).flatten()
-        print(f"Calculated similarity scores, max: {sim_scores.max():.3f}, min: {sim_scores.min():.3f}")
-
-        # Get user's owned games to exclude them
-        user_library = pd.read_sql(
-            f"SELECT appid FROM user_library WHERE user_id = {int(steam_id[:16])}", 
-            connection
-        )
-        owned_appids = [int(x) for x in user_library["appid"].tolist()]  # Convert to native int
-        print(f"User owns {len(owned_appids)} games, excluding from recommendations")
+        print(f"Similarity scores - Max: {sim_scores.max():.3f}, Min: {sim_scores.min():.3f}")
 
         # Get top recommendations
         recommendations = []
-        top_indices = sim_scores.argsort()[::-1]
         
-        count = 0
-        for i in top_indices:
-            if count >= recommendations_count:
+        # Get indices sorted by similarity (descending)
+        similar_indices = sim_scores.argsort()[::-1]
+        
+        for i in similar_indices:
+            if len(recommendations) >= recommendations_count:
                 break
                 
-            rec = popular_games.iloc[i]
-            similarity_score = float(sim_scores[i])  # Convert to native float
+            rec_game = popular_games.iloc[i]
+            similarity_score = float(sim_scores[i])
+            rec_appid = int(rec_game["appid"])
             
             # Skip if already owned or same game
-            if int(rec["appid"]) in owned_appids:  # Convert to int for comparison
+            if rec_appid in owned_appids or rec_appid == appid:
                 continue
                 
             # Skip if similarity is too low
-            if similarity_score < 0.01:  # Lower threshold
+            if similarity_score < 0.05:
                 continue
                 
             recommendations.append({
-                "name": str(rec["name"]),  # Convert to native string
-                "appid": int(rec["appid"]),  # Convert to native int
-                "poster": str(rec["header_image"]) if pd.notna(rec["header_image"]) else "",
-                "genre": str(rec["genre"] or "Unknown Genre"),  # Convert to native string
-                "similarity": round(similarity_score, 3),  # Already native float
-                "reason": f"Similar to {game_name}"
+                "name": str(rec_game["name"]),
+                "appid": rec_appid,
+                "poster": str(rec_game.get("header_image", "")) if pd.notna(rec_game.get("header_image")) else "",
+                "genre": str(rec_game.get("genre", "Unknown") or "Unknown"),
+                "similarity": round(similarity_score, 3)
             })
-            count += 1
-            print(f"Added recommendation: {rec['name']} (score: {similarity_score:.3f})")
 
-        connection.close()
-        
-        # If no recommendations found, try fallback
+        # If no recommendations found, use fallback
         if not recommendations:
-            print("No recommendations found with content-based filtering, trying fallback...")
-            return get_fallback_recommendations(game_name, popular_games, steam_id, recommendations_count)
+            print("No recommendations found with similarity filtering, using fallback")
+            return get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count)
         
         print(f"Successfully generated {len(recommendations)} recommendations")
         return recommendations
-    
+        
     except Exception as e:
-        print(f"Error generating recommendations for appid {appid}: {e}")
+        print(f"Error generating recommendations: {e}")
         import traceback
         traceback.print_exc()
+        try:
+            connection.close()
+        except:
+            pass
         return []
 
-def get_fallback_recommendations(game_name, popular_games, steam_id, recommendations_count=6):
-    """Fallback method when content-based filtering fails"""
+def get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count=6):
+    """Fallback method when similarity filtering fails"""
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        user_library = pd.read_sql(
-            f"SELECT appid FROM user_library WHERE user_id = {int(steam_id[:16])}", 
-            connection
-        )
-        owned_appids = [int(x) for x in user_library["appid"].tolist()]  # Convert to native int
-        connection.close()
-        
-        # Get games with similar genres (simple text matching)
         recommendations = []
+        
+        # Try to find games with similar genres first
         game_words = set(game_name.lower().split())
         
         for _, game in popular_games.iterrows():
             if len(recommendations) >= recommendations_count:
                 break
                 
-            if int(game["appid"]) in owned_appids:  # Convert to int for comparison
+            game_appid = int(game["appid"])
+            if game_appid in owned_appids:
                 continue
                 
-            # Simple keyword matching
-            game_name_words = set(str(game["name"]).lower().split())
-            common_words = game_words.intersection(game_name_words)
+            # Check for common words in game names
+            current_game_words = set(str(game["name"]).lower().split())
+            common_words = game_words.intersection(current_game_words)
             
-            if len(common_words) >= 1:  # At least one common word
+            if len(common_words) >= 2:  # At least 2 common words
                 recommendations.append({
-                    "name": str(game["name"]),  # Convert to native string
-                    "appid": int(game["appid"]),  # Convert to native int
-                    "poster": str(game["header_image"]) if pd.notna(game["header_image"]) else "",
-                    "genre": str(game["genre"] or "Unknown Genre"),  # Convert to native string
-                    "similarity": round(0.3 + (len(common_words) * 0.1), 3),  # Fake similarity score
-                    "reason": f"Similar keywords to {game_name}"
+                    "name": str(game["name"]),
+                    "appid": game_appid,
+                    "poster": str(game.get("header_image", "")) if pd.notna(game.get("header_image")) else "",
+                    "genre": str(game.get("genre", "Unknown") or "Unknown"),
+                    "similarity": round(0.4 + (len(common_words) * 0.1), 3)
                 })
-        
-        # If still no recommendations, return popular games
+
+        # If still no recommendations, get random popular games
         if not recommendations:
-            for _, game in popular_games.iterrows():
-                if len(recommendations) >= recommendations_count:
-                    break
-                    
-                if int(game["appid"]) not in owned_appids:  # Convert to int for comparison
+            available_games = popular_games[~popular_games["appid"].isin(owned_appids)]
+            if len(available_games) > 0:
+                sample_games = available_games.sample(min(recommendations_count, len(available_games)))
+                for _, game in sample_games.iterrows():
                     recommendations.append({
-                        "name": str(game["name"]),  # Convert to native string
-                        "appid": int(game["appid"]),  # Convert to native int
-                        "poster": str(game["header_image"]) if pd.notna(game["header_image"]) else "",
-                        "genre": str(game["genre"] or "Unknown Genre"),  # Convert to native string
-                        "similarity": 0.2,  # Low similarity score
-                        "reason": "Popular game you might like"
+                        "name": str(game["name"]),
+                        "appid": int(game["appid"]),
+                        "poster": str(game.get("header_image", "")) if pd.notna(game.get("header_image")) else "",
+                        "genre": str(game.get("genre", "Unknown") or "Unknown"),
+                        "similarity": 0.3
                     })
         
         print(f"Fallback generated {len(recommendations)} recommendations")
@@ -327,42 +364,45 @@ def get_fallback_recommendations(game_name, popular_games, steam_id, recommendat
         return []
 
 # ----------------- Debug Route -----------------
-@app.route("/debug/user_games")
-def debug_user_games():
-    steam_id = session.get("steam_id")
-    if not steam_id:
-        return "Not authenticated"
-    
-    connection = mysql.connector.connect(**DB_CONFIG)
-    user_library = pd.read_sql(
-        f"SELECT * FROM user_library WHERE user_id = {int(steam_id[:16])}", 
-        connection
-    )
-    popular_games = pd.read_sql("SELECT * FROM popular_games", connection)
-    connection.close()
-    
-    result = f"""
-    <h1>Debug Info</h1>
-    <h2>User Library ({len(user_library)} games):</h2>
-    <ul>
-    """
-    for _, game in user_library.iterrows():
-        result += f"<li>{game['name']} (AppID: {game['appid']}, Playtime: {game['playtime_hours']}h)</li>"
-    
-    result += f"""
-    </ul>
-    <h2>Popular Games ({len(popular_games)} games)</h2>
-    <h2>Matching Games:</h2>
-    <ul>
-    """
-    
-    matching_games = popular_games[popular_games["appid"].isin(user_library["appid"])]
-    for _, game in matching_games.iterrows():
-        result += f"<li>{game['name']} (AppID: {game['appid']})</li>"
-    
-    result += "</ul>"
-    return result
+@app.route("/debug/db")
+def debug_db():
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        cursor = connection.cursor()
+        
+        # Check tables
+        cursor.execute("SHOW TABLES")
+        tables = cursor.fetchall()
+        
+        # Check counts
+        cursor.execute("SELECT COUNT(*) as count FROM user_library")
+        user_library_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM popular_games")
+        popular_games_count = cursor.fetchone()[0]
+        
+        cursor.close()
+        connection.close()
+        
+        return f"""
+        <h1>Database Debug</h1>
+        <p>Tables: {tables}</p>
+        <p>User Library Count: {user_library_count}</p>
+        <p>Popular Games Count: {popular_games_count}</p>
+        """
+    except Exception as e:
+        return f"Database error: {str(e)}"
 
 # ----------------- Run Flask App -----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    print("🎮 GAME MASTER System Online")
+    print("📍 Available Routes:")
+    print("   / - Login Terminal")
+    print("   /login - Steam Access")
+    print("   /authorize - Authentication Protocol")
+    print("   /get_recommendations/<appid> - Game Analysis")
+    print("   /debug/db - System Diagnostics")
+    
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)

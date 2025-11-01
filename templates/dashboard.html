@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameRecommender - Dashboard</title>
+    <title>SYSTEM TERMINAL - GAME MASTER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,289 +13,591 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --neon-red: #ff0000;
+            --neon-green: #00ff00;
+            --neon-blue: #0000ff;
+            --cyber-orange: #ff6b00;
+            --matrix-green: #00ff00;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Orbitron', monospace;
+            background: #000000;
             min-height: 100vh;
-            color: white;
+            color: var(--matrix-green);
+            overflow-x: hidden;
         }
 
-        .header {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 20px 50px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        .terminal-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255, 0, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 255, 0, 0.1) 0%, transparent 50%);
+            z-index: -2;
         }
 
-        .user-info {
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 0, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: -1;
+            animation: gridScroll 15s linear infinite;
+        }
+
+        @keyframes gridScroll {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(40px, 40px); }
+        }
+
+        .system-header {
+            background: rgba(0, 20, 0, 0.95);
+            border-bottom: 3px solid var(--neon-red);
+            padding: 25px 50px;
+            box-shadow: 0 0 40px rgba(255, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .user-terminal {
             display: flex;
             align-items: center;
-            gap: 20px;
-            margin-bottom: 10px;
+            gap: 25px;
+            margin-bottom: 20px;
         }
 
-        .avatar {
-            width: 60px;
-            height: 60px;
+        .avatar-terminal {
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
-            border: 3px solid #00ccff;
-            box-shadow: 0 0 20px rgba(0, 204, 255, 0.5);
-        }
-
-        .user-details h1 {
-            font-size: 1.8rem;
-            margin-bottom: 5px;
-            background: linear-gradient(45deg, #00ccff, #00ffaa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .stats {
-            display: flex;
-            gap: 30px;
-            margin-top: 10px;
-        }
-
-        .stat {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 10px 20px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 30px;
-        }
-
-        .section-title {
-            font-size: 2rem;
-            margin-bottom: 30px;
-            text-align: center;
-            background: linear-gradient(45deg, #00ccff, #00ffaa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 50px;
-        }
-
-        .game-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 3px solid var(--neon-red);
+            box-shadow: 0 0 25px rgba(255, 0, 0, 0.7);
+            background: #000;
             position: relative;
             overflow: hidden;
+            animation: glitchBorder 4s infinite;
         }
 
-        .game-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        @keyframes glitchBorder {
+            0%, 100% { border-color: var(--neon-red); }
+            33% { border-color: var(--neon-green); }
+            66% { border-color: var(--neon-blue); }
         }
 
-        .game-card.active {
-            border-color: #00ffaa;
-            box-shadow: 0 0 30px rgba(0, 255, 170, 0.3);
+        .user-data h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--neon-red), var(--cyber-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 15px rgba(255, 107, 0, 0.7);
+            letter-spacing: 3px;
         }
 
-        .game-name {
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #00ccff;
+        .user-data p {
+            color: var(--matrix-green);
+            font-size: 1.2rem;
+            letter-spacing: 2px;
         }
 
-        .game-playtime {
-            color: #00ffaa;
-            font-size: 0.9rem;
+        .stats-terminal {
+            display: flex;
+            gap: 30px;
+            margin-top: 25px;
         }
 
-        .recommendations-section {
-            margin-top: 50px;
-        }
-
-        .recommendations-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .recommendation-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .stat-node {
+            background: rgba(0, 30, 0, 0.9);
+            border: 2px solid var(--neon-green);
+            padding: 18px 28px;
+            position: relative;
+            overflow: hidden;
             transition: all 0.3s ease;
         }
 
-        .recommendation-card:hover {
-            transform: translateY(-3px);
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .rec-poster {
+        .stat-node::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
             width: 100%;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 15px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 0, 0.3), transparent);
+            transition: left 0.5s ease;
         }
 
-        .rec-name {
-            font-size: 1.1rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #00ccff;
+        .stat-node:hover::before {
+            left: 100%;
         }
 
-        .rec-genre {
-            color: #cccccc;
-            font-size: 0.9rem;
-            margin-bottom: 10px;
+        .stat-node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 255, 0, 0.5);
+            border-color: var(--neon-red);
         }
 
-        .rec-similarity {
-            color: #00ffaa;
-            font-weight: bold;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #00ccff;
-        }
-
-        .no-selection {
-            text-align: center;
-            padding: 60px;
-            color: #cccccc;
+        .stat-node i {
+            color: var(--neon-red);
+            margin-right: 12px;
             font-size: 1.2rem;
         }
 
-        .logout-btn {
+        .logout-terminal {
             position: absolute;
             top: 30px;
             right: 50px;
             background: rgba(255, 0, 0, 0.2);
-            color: #ff4444;
-            border: 1px solid #ff4444;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
+            color: var(--neon-red);
+            border: 2px solid var(--neon-red);
+            padding: 15px 28px;
             text-decoration: none;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
             transition: all 0.3s ease;
         }
 
-        .logout-btn:hover {
-            background: rgba(255, 0, 0, 0.3);
+        .logout-terminal:hover {
+            background: rgba(255, 0, 0, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(255, 0, 0, 0.5);
+        }
+
+        .main-terminal {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .section-title {
+            font-size: 2.8rem;
+            margin-bottom: 40px;
+            text-align: center;
+            background: linear-gradient(45deg, var(--neon-red), var(--cyber-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 15px rgba(255, 107, 0, 0.5);
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(45deg, var(--neon-red), var(--cyber-orange));
+        }
+
+        .games-terminal {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 60px;
+        }
+
+        .game-node {
+            background: rgba(0, 30, 0, 0.9);
+            border: 2px solid var(--neon-green);
+            border-radius: 0;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-node::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(45deg, var(--neon-red), var(--cyber-orange));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .game-node:hover {
+            transform: translateY(-8px) scale(1.02);
+            background: rgba(0, 40, 0, 0.95);
+            box-shadow: 0 15px 35px rgba(0, 255, 0, 0.4);
+            border-color: var(--neon-red);
+        }
+
+        .game-node:hover::before {
+            transform: scaleX(1);
+        }
+
+        .game-node.active {
+            border-color: var(--cyber-orange);
+            box-shadow: 0 0 30px rgba(255, 107, 0, 0.6);
+            background: rgba(30, 0, 0, 0.9);
+        }
+
+        .game-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--neon-red);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: uppercase;
+        }
+
+        .game-playtime {
+            color: var(--cyber-orange);
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .recommendations-terminal {
+            margin-top: 60px;
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .recommendation-node {
+            background: rgba(0, 30, 0, 0.9);
+            border: 2px solid var(--neon-green);
+            border-radius: 0;
+            padding: 25px;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .recommendation-node:hover {
+            transform: translateY(-6px) scale(1.03);
+            background: rgba(0, 40, 0, 0.95);
+            box-shadow: 0 12px 30px rgba(0, 255, 0, 0.4);
+            border-color: var(--neon-red);
+        }
+
+        .rec-poster {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #000, #111);
+            border: 1px solid var(--neon-green);
+        }
+
+        .rec-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--neon-red);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-transform: uppercase;
+        }
+
+        .rec-genre {
+            color: var(--matrix-green);
+            font-size: 1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rec-similarity {
+            color: var(--cyber-orange);
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 107, 0, 0.1);
+            padding: 8px 15px;
+            border: 1px solid rgba(255, 107, 0, 0.3);
+        }
+
+        .loading-terminal {
+            text-align: center;
+            padding: 80px;
+            color: var(--neon-red);
+            animation: pulse 2s infinite;
+        }
+
+        .no-selection {
+            text-align: center;
+            padding: 100px;
+            color: var(--matrix-green);
+            font-size: 1.4rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .error-terminal {
+            text-align: center;
+            padding: 60px;
+            color: var(--neon-red);
+            background: rgba(255, 0, 0, 0.1);
+            border: 2px solid var(--neon-red);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-red), transparent);
+            animation: scan 4s linear infinite;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; opacity: 0; }
+            50% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .glitch {
+            animation: glitch 5s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            1% { transform: translate(-2px, 2px); }
+            2% { transform: translate(2px, -2px); }
+            3% { transform: translate(-2px, -2px); }
+            4% { transform: translate(2px, 2px); }
+            5% { transform: translate(0); }
+        }
+
+        @media (max-width: 768px) {
+            .system-header {
+                padding: 20px;
+            }
+            
+            .main-terminal {
+                padding: 20px;
+            }
+            
+            .games-terminal {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-terminal {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .logout-terminal {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 15px;
+                text-align: center;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="user-info">
+    <div class="terminal-bg"></div>
+    <div class="grid-overlay"></div>
+    <div class="scan-line"></div>
+
+    <div class="system-header">
+        <div class="user-terminal">
             {% if avatar %}
-            <img src="{{ avatar }}" alt="Avatar" class="avatar">
+            <img src="{{ avatar }}" alt="Avatar" class="avatar-terminal" onerror="this.style.display='none'">
             {% endif %}
-            <div class="user-details">
-                <h1>Welcome, {{ username }}! 🎮</h1>
-                <p>Steam ID: {{ steam_id }}</p>
+            <div class="user-data">
+                <h1 class="glitch">OPERATOR: {{ username or 'USER' }}</h1>
+                <p>STEAM ID: {{ steam_id or 'CLASSIFIED' }}</p>
             </div>
         </div>
-        <div class="stats">
-            <div class="stat">
-                <strong>{{ games_count }}</strong> Games in Library
+        <div class="stats-terminal">
+            <div class="stat-node">
+                <i class="fas fa-gamepad"></i>
+                <strong>{{ games_count or 0 }}</strong> GAMES IN LIBRARY
             </div>
-            <div class="stat">
-                <strong>{{ user_games|length }}</strong> Games Loaded
+            <div class="stat-node">
+                <i class="fas fa-database"></i>
+                <strong>{{ user_games|length if user_games else 0 }}</strong> GAMES LOADED
+            </div>
+            <div class="stat-node">
+                <i class="fas fa-clock"></i>
+                <strong>{{ (user_games|sum(attribute='playtime_hours')|round(1) if user_games else 0) }}</strong> TOTAL HOURS
             </div>
         </div>
-        <a href="/" class="logout-btn">Logout</a>
+        <a href="/" class="logout-terminal">
+            <i class="fas fa-power-off"></i>
+            SYSTEM LOGOUT
+        </a>
     </div>
 
-    <div class="container">
-        <h2 class="section-title">🎯 Your Game Library</h2>
-        <p style="text-align: center; margin-bottom: 30px; color: #cccccc;">
-            Click on any game to get personalized recommendations
+    <div class="main-terminal">
+        <h2 class="section-title">
+            <i class="fas fa-gamepad"></i>
+            GAME LIBRARY TERMINAL
+        </h2>
+        <p style="text-align: center; margin-bottom: 40px; color: var(--matrix-green); font-size: 1.2rem; letter-spacing: 2px;">
+            <i class="fas fa-mouse-pointer"></i>
+            SELECT GAME FOR ANALYSIS AND RECOMMENDATIONS
         </p>
 
-        <div class="games-grid" id="gamesGrid">
-            {% for game in user_games %}
-            <div class="game-card" onclick="getRecommendations({{ game.appid }}, this)">
-                <div class="game-name">{{ game.name }}</div>
-                <div class="game-playtime">
-                    ⏱️ {{ game.playtime_hours }} hours ({{ game.playtime_minutes|int }} minutes)
+        <div class="games-terminal" id="gamesTerminal">
+            {% if user_games and user_games|length > 0 %}
+                {% for game in user_games %}
+                <div class="game-node" onclick="getRecommendations({{ game.appid }}, this)">
+                    <div class="game-name">
+                        <i class="fas fa-chess-board"></i>
+                        {{ game.name }}
+                    </div>
+                    <div class="game-playtime">
+                        <i class="fas fa-clock"></i>
+                        {{ "%.1f"|format(game.playtime_hours) }} HOURS ({{ game.playtime_minutes|int }} MINUTES)
+                    </div>
                 </div>
-            </div>
-            {% endfor %}
+                {% endfor %}
+            {% else %}
+                <div class="error-terminal">
+                    <div style="font-size: 3rem; margin-bottom: 20px;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>NO GAMES DETECTED IN LIBRARY</div>
+                    <div style="margin-top: 15px; font-size: 1rem;">STEAM PROFILE ANALYSIS REQUIRED</div>
+                </div>
+            {% endif %}
         </div>
 
-        <div class="recommendations-section">
-            <h2 class="section-title">🚀 Recommendations</h2>
-            <div id="recommendationsContainer">
+        <div class="recommendations-terminal">
+            <h2 class="section-title">
+                <i class="fas fa-rocket"></i>
+                GAME ANALYSIS RESULTS
+            </h2>
+            <div id="recommendationsTerminal">
                 <div class="no-selection">
-                    👆 Select a game from your library to see recommendations
+                    <div style="font-size: 4rem; margin-bottom: 20px;">
+                        <i class="fas fa-crosshairs"></i>
+                    </div>
+                    <div>SELECT GAME FOR ANALYSIS</div>
+                    <div style="margin-top: 15px; font-size: 1rem; color: var(--cyber-orange);">
+                        <i class="fas fa-bolt"></i>
+                        SYSTEM READY FOR PROCESSING
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let currentActiveCard = null;
+        let currentActiveNode = null;
+        let isProcessing = false;
 
         function getRecommendations(appid, element) {
+            if (isProcessing) return;
+            
             // Update active state
-            if (currentActiveCard) {
-                currentActiveCard.classList.remove('active');
+            if (currentActiveNode) {
+                currentActiveNode.classList.remove('active');
             }
             element.classList.add('active');
-            currentActiveCard = element;
+            currentActiveNode = element;
 
-            // Show loading
-            document.getElementById('recommendationsContainer').innerHTML = `
-                <div class="loading">
-                    <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
-                    <div>Finding similar games...</div>
+            // Add click animation
+            element.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1.02)';
+            }, 150);
+
+            // Show processing
+            document.getElementById('recommendationsTerminal').innerHTML = `
+                <div class="loading-terminal">
+                    <div style="font-size: 4rem; margin-bottom: 25px;">
+                        <i class="fas fa-cog fa-spin"></i>
+                    </div>
+                    <div style="font-size: 1.4rem; margin-bottom: 15px; text-transform: uppercase;">ANALYZING GAME DATA</div>
+                    <div style="font-size: 1rem; color: var(--matrix-green); letter-spacing: 2px;">PROCESSING SIMILARITY MATRICES</div>
+                    <div class="glitch" style="margin-top: 20px; font-size: 2rem;">
+                        <i class="fas fa-satellite-dish"></i>
+                    </div>
                 </div>
             `;
 
+            isProcessing = true;
+
             // Fetch recommendations
             fetch(`/get_recommendations/${appid}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`SYSTEM ERROR: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(recommendations => {
                     displayRecommendations(recommendations);
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    document.getElementById('recommendationsContainer').innerHTML = `
-                        <div class="loading">
-                            <div style="color: #ff4444;">Error loading recommendations</div>
+                    document.getElementById('recommendationsTerminal').innerHTML = `
+                        <div class="error-terminal">
+                            <div style="font-size: 3rem; margin-bottom: 20px;">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                            <div style="font-size: 1.3rem; margin-bottom: 15px;">SYSTEM PROCESSING ERROR</div>
+                            <div style="font-size: 1rem;">${error.message}</div>
                         </div>
                     `;
+                })
+                .finally(() => {
+                    isProcessing = false;
                 });
         }
 
         function displayRecommendations(recommendations) {
-            const container = document.getElementById('recommendationsContainer');
+            const terminal = document.getElementById('recommendationsTerminal');
             
-            if (!recommendations || recommendations.length === 0) {
-                container.innerHTML = `
+            if (!recommendations || !Array.isArray(recommendations) || recommendations.length === 0) {
+                terminal.innerHTML = `
                     <div class="no-selection">
-                        <div style="font-size: 2rem; margin-bottom: 10px;">😔</div>
-                        <div>No recommendations found for this game.</div>
-                        <div style="margin-top: 10px; font-size: 0.9rem;">Try selecting another game from your library.</div>
+                        <div style="font-size: 3rem; margin-bottom: 20px;">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div>NO MATCHING GAMES FOUND</div>
+                        <div style="margin-top: 15px; font-size: 1rem; color: var(--cyber-orange);">
+                            TRY SELECTING ANOTHER GAME FOR ANALYSIS
+                        </div>
                     </div>
                 `;
                 return;
@@ -301,27 +605,42 @@
 
             let html = '<div class="recommendations-grid">';
             
-            recommendations.forEach(rec => {
+            recommendations.forEach((rec, index) => {
+                const posterHtml = rec.poster ? 
+                    `<img src="${rec.poster}" alt="${rec.name}" class="rec-poster" onerror="this.style.display='none'">` :
+                    `<div class="rec-poster" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #000, #111); color: var(--neon-red); font-size: 3rem;">
+                        <i class="fas fa-gamepad"></i>
+                    </div>`;
+                
                 html += `
-                    <div class="recommendation-card">
-                        ${rec.poster ? `<img src="${rec.poster}" alt="${rec.name}" class="rec-poster" onerror="this.style.display='none'">` : ''}
-                        <div class="rec-name">${rec.name}</div>
-                        <div class="rec-genre">${rec.genre || 'Genre not available'}</div>
-                        <div class="rec-similarity">Similarity: ${rec.similarity}</div>
+                    <div class="recommendation-node" style="animation-delay: ${index * 0.1}s">
+                        ${posterHtml}
+                        <div class="rec-name">
+                            <i class="fas fa-dice"></i>
+                            ${rec.name || 'UNKNOWN GAME'}
+                        </div>
+                        <div class="rec-genre">
+                            <i class="fas fa-tags"></i>
+                            ${rec.genre || 'GENRE CLASSIFIED'}
+                        </div>
+                        <div class="rec-similarity">
+                            <i class="fas fa-bolt"></i>
+                            MATCH: ${rec.similarity || 'N/A'}
+                        </div>
                     </div>
                 `;
             });
             
             html += '</div>';
-            container.innerHTML = html;
+            terminal.innerHTML = html;
         }
 
-        // Select first game by default
+        // Auto-select first game on page load
         document.addEventListener('DOMContentLoaded', function() {
-            const firstGameCard = document.querySelector('.game-card');
-            if (firstGameCard) {
+            const firstGameNode = document.querySelector('.game-node');
+            if (firstGameNode && !firstGameNode.classList.contains('error-terminal')) {
                 setTimeout(() => {
-                    firstGameCard.click();
+                    firstGameNode.click();
                 }, 1000);
             }
         });
