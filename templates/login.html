@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SYSTEM ACCESS - GAME MASTER</title>
+    <title>GAME MASTER - Access Terminal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -11,6 +11,18 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+        }
+
+        :root {
+            --neon-red: #ff0000;
+            --neon-green: #00ff00;
+            --neon-blue: #0000ff;
+            --cyber-orange: #ff6b00;
+            --matrix-green: #00ff00;
+            --ps-blue: #003087;
+            --xbox-green: #107c10;
+            --nintendo-red: #e60012;
+            --sega-blue: #0088cc;
         }
 
         body {
@@ -226,6 +238,83 @@
             90% { opacity: 0.3; }
             100% { transform: translateY(100vh); opacity: 0; }
         }
+
+        /* Console Badges */
+        .console-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .console-badge {
+            padding: 8px 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ps-badge { background: var(--ps-blue); color: white; }
+        .xbox-badge { background: var(--xbox-green); color: white; }
+        .nintendo-badge { background: var(--nintendo-red); color: white; }
+        .sega-badge { background: var(--sega-blue); color: white; }
+
+        /* Easter Eggs */
+        .easter-egg {
+            position: fixed;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
+        .konami-code {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 0, 0, 0.3);
+            border-radius: 50%;
+            z-index: 1001;
+        }
+
+        .controller-icon {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 2rem;
+            color: var(--neon-green);
+            cursor: pointer;
+            z-index: 1001;
+            transition: all 0.3s;
+        }
+
+        .controller-icon:hover {
+            color: var(--neon-red);
+            transform: scale(1.2);
+        }
+
+        /* Controller Animation */
+        .controller-animation {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 100px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--neon-green);
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            color: var(--neon-green);
+            font-size: 0.8rem;
+            text-align: center;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -251,10 +340,50 @@
             <i class="fas fa-skull-crossbones"></i>
         </a>
 
+        <div class="console-badges">
+            <div class="console-badge ps-badge">PS</div>
+            <div class="console-badge xbox-badge">XBOX</div>
+            <div class="console-badge nintendo-badge">SWITCH</div>
+            <div class="console-badge sega-badge">SEGA</div>
+        </div>
+
         <div class="warning">
             <i class="fas fa-exclamation-triangle"></i>
             AUTHORIZED PERSONNEL ONLY - SECURITY LEVEL 5
         </div>
+    </div>
+
+    <!-- Easter Eggs -->
+    <div class="easter-egg" id="marioEgg">
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 30px; border: 3px solid var(--nintendo-red); text-align: center; border-radius: 10px;">
+            <h2 style="color: var(--nintendo-red); margin-bottom: 15px; font-size: 2rem;">IT'S-A ME, MARIO!</h2>
+            <p style="color: white; margin-bottom: 20px; font-size: 1.2rem;">You found the Nintendo easter egg!</p>
+            <button onclick="hideEasterEgg('marioEgg')" style="background: var(--nintendo-red); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+
+    <div class="easter-egg" id="sonicEgg">
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 30px; border: 3px solid var(--sega-blue); text-align: center; border-radius: 10px;">
+            <h2 style="color: var(--sega-blue); margin-bottom: 15px; font-size: 2rem;">GOTTA GO FAST!</h2>
+            <p style="color: white; margin-bottom: 20px; font-size: 1.2rem;">You found the Sega easter egg!</p>
+            <button onclick="hideEasterEgg('sonicEgg')" style="background: var(--sega-blue); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+
+    <div class="easter-egg" id="haloEgg">
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.9); padding: 30px; border: 3px solid var(--xbox-green); text-align: center; border-radius: 10px;">
+            <h2 style="color: var(--xbox-green); margin-bottom: 15px; font-size: 2rem;">FINISH THE FIGHT</h2>
+            <p style="color: white; margin-bottom: 20px; font-size: 1.2rem;">You found the Xbox easter egg!</p>
+            <button onclick="hideEasterEgg('haloEgg')" style="background: var(--xbox-green); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+
+    <div class="konami-code" id="konamiTrigger"></div>
+    <div class="controller-icon" onclick="showControllerEasterEgg()">
+        <i class="fas fa-gamepad"></i>
+    </div>
+    <div class="controller-animation" id="controllerAnimation">
+        🎮 CONTROLLER DETECTED
     </div>
 
     <script>
@@ -274,67 +403,111 @@
             }
         }
 
+        // Easter egg functions
+        function showEasterEgg(eggId) {
+            document.getElementById(eggId).style.opacity = '1';
+            document.getElementById(eggId).style.pointerEvents = 'all';
+        }
+
+        function hideEasterEgg(eggId) {
+            document.getElementById(eggId).style.opacity = '0';
+            document.getElementById(eggId).style.pointerEvents = 'none';
+        }
+
+        function showControllerEasterEgg() {
+            const animation = document.getElementById('controllerAnimation');
+            animation.style.display = 'flex';
+            setTimeout(() => {
+                animation.style.display = 'none';
+            }, 3000);
+        }
+
+        // Konami code easter egg
+        let konamiCode = [];
+        const konamiSequence = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+
+        document.addEventListener('keydown', (e) => {
+            konamiCode.push(e.code);
+            if (konamiCode.length > konamiSequence.length) {
+                konamiCode.shift();
+            }
+            
+            if (konamiCode.join(',') === konamiSequence.join(',')) {
+                showEasterEgg('marioEgg');
+                konamiCode = [];
+            }
+        });
+
+        // Add click effect to access button
+        const accessBtn = document.querySelector('.access-btn');
+        accessBtn.addEventListener('click', function(e) {
+            // Create explosion effect
+            for (let i = 0; i < 15; i++) {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: fixed;
+                    width: 6px;
+                    height: 6px;
+                    background: #ff0000;
+                    border-radius: 50%;
+                    pointer-events: none;
+                    animation: explode 1s ease-out forwards;
+                `;
+                
+                const rect = accessBtn.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                particle.style.left = centerX + 'px';
+                particle.style.top = centerY + 'px';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 150 + 50;
+                const x = Math.cos(angle) * distance;
+                const y = Math.sin(angle) * distance;
+                
+                particle.style.setProperty('--x', x + 'px');
+                particle.style.setProperty('--y', y + 'px');
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => particle.remove(), 1000);
+            }
+            
+            // Add CSS for explosion
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes explode {
+                    0% {
+                        transform: translate(0, 0);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translate(var(--x), var(--y));
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+
+        // Initialize on load
         document.addEventListener('DOMContentLoaded', function() {
             createBinaryRain();
             
-            // Add click effect to access button
-            const accessBtn = document.querySelector('.access-btn');
-            accessBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Create explosion effect
-                for (let i = 0; i < 15; i++) {
-                    const particle = document.createElement('div');
-                    particle.style.cssText = `
-                        position: fixed;
-                        width: 6px;
-                        height: 6px;
-                        background: #ff0000;
-                        border-radius: 50%;
-                        pointer-events: none;
-                        animation: explode 1s ease-out forwards;
-                    `;
-                    
-                    const rect = accessBtn.getBoundingClientRect();
-                    const centerX = rect.left + rect.width / 2;
-                    const centerY = rect.top + rect.height / 2;
-                    
-                    particle.style.left = centerX + 'px';
-                    particle.style.top = centerY + 'px';
-                    
-                    const angle = Math.random() * Math.PI * 2;
-                    const distance = Math.random() * 150 + 50;
-                    const x = Math.cos(angle) * distance;
-                    const y = Math.sin(angle) * distance;
-                    
-                    particle.style.setProperty('--x', x + 'px');
-                    particle.style.setProperty('--y', y + 'px');
-                    
-                    document.body.appendChild(particle);
-                    
-                    setTimeout(() => particle.remove(), 1000);
-                }
-                
-                // Add CSS for explosion
-                const style = document.createElement('style');
-                style.textContent = `
-                    @keyframes explode {
-                        0% {
-                            transform: translate(0, 0);
-                            opacity: 1;
-                        }
-                        100% {
-                            transform: translate(var(--x), var(--y));
-                            opacity: 0;
-                        }
-                    }
-                `;
-                document.head.appendChild(style);
-                
-                // Redirect after effect
+            // Randomly show console badges with animation
+            const badges = document.querySelectorAll('.console-badge');
+            badges.forEach((badge, index) => {
                 setTimeout(() => {
-                    window.location.href = accessBtn.href;
-                }, 600);
+                    badge.style.opacity = '0';
+                    badge.style.transform = 'translateY(-20px)';
+                    badge.style.transition = 'all 0.5s ease';
+                    
+                    setTimeout(() => {
+                        badge.style.opacity = '1';
+                        badge.style.transform = 'translateY(0)';
+                    }, 100);
+                }, index * 200);
             });
         });
     </script>
