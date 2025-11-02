@@ -6,24 +6,48 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from config import STEAM_API_KEY, DB_CONFIG
+import os
+import urllib.parse
 
 app = Flask(__name__)
-app.secret_key = "aizen"
+app.secret_key = os.environ.get("SECRET_KEY", "aizen")
 
 STEAM_OPENID_URL = "https://steamcommunity.com/openid/login"
+
+# ----------------- Database Connection Helper -----------------
+def get_db_connection():
+    try:
+        connection = mysql.connector.connect(**DB_CONFIG)
+        return connection
+    except Exception as e:
+        print(f"❌ Database connection failed: {e}")
+        return None
 
 # ----------------- Home & Login -----------------
 @app.route("/")
 def home():
     return render_template("login.html")
 
+@app.route("/health")
+def health_check():
+    return jsonify({"status": "healthy", "message": "Game Master API is running"})
+
 @app.route("/login")
 def login():
+    # Get current domain for production
+    base_url = request.host_url.rstrip('/')
+    if 'railway' in base_url or 'localhost' not in base_url:
+        return_to = f"{base_url}/authorize"
+        realm = base_url
+    else:
+        return_to = "http://localhost:5000/authorize"
+        realm = "http://localhost:5000/"
+    
     params = {
         "openid.ns": "http://specs.openid.net/auth/2.0",
         "openid.mode": "checkid_setup",
-        "openid.return_to": "http://localhost:5000/authorize",
-        "openid.realm": "http://localhost:5000/",
+        "openid.return_to": return_to,
+        "openid.realm": realm,
         "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
         "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
     }
@@ -93,7 +117,10 @@ def fetch_user_library(steam_id):
         if not owned_games:
             return 0
 
-        connection = mysql.connector.connect(**DB_CONFIG)
+        connection = get_db_connection()
+        if not connection:
+            return 0
+
         cursor = connection.cursor()
 
         games_inserted = 0
@@ -133,7 +160,9 @@ def fetch_user_library(steam_id):
 # ----------------- Get User Games from DB -----------------
 def get_user_games_from_db(steam_id):
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
+        connection = get_db_connection()
+        if not connection:
+            return []
         
         # Create stable user_id same as in fetch_user_library
         user_id = int(steam_id) % 100000000
@@ -179,10 +208,13 @@ def get_recommendations(appid):
         return jsonify({"error": "Internal server error"}), 500
 
 def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
+    connection = None
     try:
         print(f"Starting recommendation generation for appid: {appid}")
         
-        connection = mysql.connector.connect(**DB_CONFIG)
+        connection = get_db_connection()
+        if not connection:
+            return []
         
         # Create user_id
         user_id = int(steam_id) % 100000000
@@ -201,7 +233,6 @@ def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
         
         if popular_games.empty:
             print("Popular games table is empty")
-            connection.close()
             return []
 
         # Get the specific game name from user library
@@ -210,7 +241,6 @@ def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
         
         if user_game.empty:
             print(f"Game {appid} not found in user library")
-            connection.close()
             return []
         
         game_name = str(user_game.iloc[0]["name"])
@@ -221,7 +251,6 @@ def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
         
         if game_in_popular.empty:
             print(f"Game {game_name} not found in popular_games, using fallback")
-            connection.close()
             return get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count)
 
         # --- Feature Engineering ---
@@ -249,7 +278,6 @@ def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
             tfidf_matrix = vectorizer.fit_transform(popular_games["combined_features"])
         except Exception as e:
             print(f"TF-IDF error: {e}, using fallback")
-            connection.close()
             return get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count)
 
         # Create appid to index mapping
@@ -258,7 +286,6 @@ def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
         idx = appid_to_index.get(int(appid))
         if idx is None:
             print(f"Game index not found for appid: {appid}")
-            connection.close()
             return get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count)
 
         # Calculate similarities
@@ -307,11 +334,10 @@ def generate_recommendations_for_game(steam_id, appid, recommendations_count=6):
         print(f"Error generating recommendations: {e}")
         import traceback
         traceback.print_exc()
-        try:
-            connection.close()
-        except:
-            pass
         return []
+    finally:
+        if connection:
+            connection.close()
 
 def get_fallback_recommendations(game_name, popular_games, owned_appids, recommendations_count=6):
     """Fallback method when similarity filtering fails"""
@@ -367,7 +393,10 @@ def get_fallback_recommendations(game_name, popular_games, owned_appids, recomme
 @app.route("/debug/db")
 def debug_db():
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
+        connection = get_db_connection()
+        if not connection:
+            return "Database connection failed"
+            
         cursor = connection.cursor()
         
         # Check tables
@@ -402,7 +431,8 @@ if __name__ == "__main__":
     print("   /authorize - Authentication Protocol")
     print("   /get_recommendations/<appid> - Game Analysis")
     print("   /debug/db - System Diagnostics")
+    print("   /health - Health Check")
     
-    import os
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    debug = os.environ.get("DEBUG", "false").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug)
